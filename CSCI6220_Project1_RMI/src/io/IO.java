@@ -1,4 +1,4 @@
-package rmi_Project;
+package io;
 
 import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
@@ -10,6 +10,8 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Random;
 
+import common.PC2IO;
+
 public class IO {
 	public static void main(String[] args) {
 		long startTime = System.currentTimeMillis();
@@ -17,40 +19,34 @@ public class IO {
 		int m = Integer.parseInt(args[0]);
 		String host = "168.18.104.56"; // PG-01.gswcm.net
 		short port = 2080;
-		String registryName = "PC2IO";
 
-		if (parameterCheck(m)) {
-			int[][] a = generateMatrix(m);
-			int[][] b = generateMatrix(m);
-			int[][] c = new int[m][m];
+		int[][] a = generateMatrix(m);
+		int[][] b = generateMatrix(m);
+		int[][] c = new int[m][m];
 
-			generateFile(a, m, "A.txt");
-			generateFile(b, m, "B.txt");
-			System.out.println("Matrix A and B are generated");
+		generateFile(a, m, "A.txt");
+		generateFile(b, m, "B.txt");
+		System.out.println("Matrix A.txt and B.txt are generated");
 
-			try {
-				Registry r = LocateRegistry.getRegistry(host, port);
-				PC2IO pc2io = (PC2IO) r.lookup(registryName);
+		try {
+			Registry r = LocateRegistry.getRegistry(host, port);
+			PC2IO pc2io = (PC2IO) r.lookup("PC2IO");
 
-				System.out.println("IO is connected to " + host + "\n");
-				System.out.println(">>>Computing matrix C...");
-				c = pc2io.mult(a, b);
-				generateFile(c, m, "C.txt");
-				System.out.println("Matrix C is generated\n");
+			System.out.println("IO is connected to " + host + "\n");
+			System.out.println(">>>Computing matrix C...");
+			c = pc2io.mult(a, b);
+			generateFile(c, m, "C.txt");
+			System.out.println("Matrix C.txt is generated\n");
 
-				System.out.println(">>>Computing determinant...");
-				int det = pc2io.det(a);
-				System.out.println("Determinant of Matrix A :" + det);
-
-			} catch (RemoteException e) {
-				System.err.println(e.getMessage());
-				System.exit(1);
-			} catch (NotBoundException e) {
-				System.err.println(e.getMessage());
-				System.exit(1);
-			}
-		} else {
-			System.out.println("Parameters are invaild.");
+			System.out.println(">>>Computing determinant...");
+			long det = pc2io.det(a);
+			System.out.println("Determinant of Matrix A :" + det);
+		} catch (RemoteException e) {
+			System.err.println(e.getMessage());
+			System.exit(1);
+		} catch (NotBoundException e) {
+			System.err.println(e.getMessage());
+			System.exit(1);
 		}
 
 		long stopTime = System.currentTimeMillis();
@@ -58,9 +54,9 @@ public class IO {
 		System.out.println("\nExecution Time : " + elapsedTime + "ms.");
 	}
 
-	static int[][] generateMatrix(int m) {
-		byte min = -100;
-		byte max = 100;
+	public static int[][] generateMatrix(int m) {
+		byte min = -10;
+		byte max = 10;
 		int[][] array = new int[m][m];
 		Random random = new Random();
 
@@ -74,7 +70,6 @@ public class IO {
 
 	static void generateFile(int[][] a, int m, String fileName) {
 		PrintStream output = null;
-
 		try {
 			output = new PrintStream(new BufferedOutputStream(new FileOutputStream(fileName)));
 
@@ -97,18 +92,6 @@ public class IO {
 			if (output != null) {
 				output.close();
 			}
-
 		}
-
-	}
-
-	static boolean parameterCheck(int m) {
-		int flag = 0;
-		if (m <= 0) {
-			flag++;
-			System.out.println("Size of matrix must be bigger than 0.");
-		}
-
-		return flag <= 0;
 	}
 }
