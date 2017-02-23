@@ -27,6 +27,7 @@ public class PC extends UnicastRemoteObject implements PC2IO, PC2W {
 		Workers = new ArrayList<W2PC>();
 	}
 
+	// Below managing connection code refer to the class lecture.
 	public static void main(String[] args) {
 
 		String ip = getIP().substring(1); // remove first character '/'
@@ -34,6 +35,7 @@ public class PC extends UnicastRemoteObject implements PC2IO, PC2W {
 		short port_pc2w = 2081;
 
 		try {
+			// Bind pw2io and pc2w registry
 			System.setProperty("java.rmi.server.hostname", ip);
 			PC2IO pc2io = new PC();
 			pc2w = new PC();
@@ -44,6 +46,7 @@ public class PC extends UnicastRemoteObject implements PC2IO, PC2W {
 			registry_pc2w.rebind("PC2W", pc2w);
 			System.out.println("PC(" + ip + ") is bounded for Worker module connection.");
 
+			// Monitor connection status
 			for (;;) {
 				int i;
 				boolean flag = false;
@@ -91,28 +94,30 @@ public class PC extends UnicastRemoteObject implements PC2IO, PC2W {
 
 	@Override
 	public int[][] mult(int[][] a, int[][] b) throws RemoteException {
-		int[][] c = new int[a.length][a.length];
+
+		// Assign the multiplication workload to an each worker thread.
 		int workerSize = Workers.size();
-		Workload[] workload = new Workload().mulPackage(a, b, workerSize);
-		Runnable th;
+		MultWorkload[] mulWorkload = new MultWorkload[workerSize];
 		Thread thread[] = new Thread[workerSize];
 
 		for (int i = 0; i < workerSize; i++) {
-			th = new Mult(Workers.get(i), workload[i]);
-			thread[i] = new Thread(th);
+			mulWorkload[i] = new MultWorkload(a, b, i, Workers.get(i), workerSize);
+			thread[i] = new Thread(mulWorkload[i]);
 			thread[i].start();
-			System.out.println("Multiplication Thread " + i + " start..");
+			System.out.println("\nMultiplication Thread " + i + " start..");
 		}
 
+		// Combine the result of each worker thread into matrix C
+		int[][] c = new int[a.length][a.length];
 		for (int w = 0; w < workerSize; w++) {
 			try {
 				thread[w].join();
-				System.out.println("Multiplication  Thread " + w + " finished..");
 				for (int w_i = 0, i = w * c.length / workerSize; i < (w + 1) * c.length / workerSize; w_i++, i++) {
 					for (int j = 0; j < c.length; j++) {
-						c[i][j] = workload[w].c[w_i][j];
+						c[i][j] = mulWorkload[w].c[w_i][j];
 					}
 				}
+				System.out.println("\nMultiplication  Thread " + w + " finished..");
 			} catch (InterruptedException e) {
 				System.err.println("Error: " + e.getMessage());
 			}
@@ -122,50 +127,55 @@ public class PC extends UnicastRemoteObject implements PC2IO, PC2W {
 
 	@Override
 	public long det(int[][] a) throws RemoteException {
+
 		long result = 0;
 		int workerSize = Workers.size();
 		int n = a.length;
 		int[] mask = new int[n];
 		Arrays.fill(mask, 1);
 		int sign = +1;
-		int assign_index = 0;
-		int combine_index = 0;
-		boolean check_Det_Finish = false;
 
-		Det temp;
+		DetWorkload[] detWorkload = new DetWorkload[workerSize];
 		Thread[] thread = new Thread[workerSize];
-		Workload[] workload = new Workload().detPackage(workerSize);
+
+		// Two queues to manage masking, assigning and combining order.
 		Queue<Integer> working_index = new LinkedList<Integer>();
 		Queue<Integer> idle_index = new LinkedList<Integer>();
 		for (int i = 0; i < workerSize; i++) {
 			idle_index.add(i);
 		}
-		while (!check_Det_Finish) {
-			while (!idle_index.isEmpty()) {
+		int mask_index = 0;
+		int combine_index = 0;
+		boolean check_Det_Finish = false;
 
+		// Check idle and working queues while determinant flag is not set.
+		while (!check_Det_Finish) {
+			// Assign new workload to idle workers
+			while (!idle_index.isEmpty()) {
 				int index = idle_index.poll();
-				mask[assign_index] = 0;
-				temp = new Det(a, Arrays.copyOf(mask, n), n - 1);
-				temp.setW2pc(Workers.get(index));
-				temp.setWorkload(workload[index]);
-				thread[index] = new Thread(temp);
+
+				mask[mask_index] = 0;
+				detWorkload[index] = new DetWorkload(a, Arrays.copyOf(mask, n), n - 1, Workers.get(index));
+				thread[index] = new Thread(detWorkload[index]);
 				thread[index].start();
-				System.out.println("Determinant Thread(Worker) " + index + " start..");
-				mask[assign_index] = 1;
+				System.out.println("\nDeterminant Thread(Worker) " + index + " start..");
+				mask[mask_index] = 1;
+
 				working_index.add(index);
-				if (assign_index == n - 1)
+				if (mask_index == n - 1)
 					break;
-				assign_index++;
+				mask_index++;
 			}
 
+			// Combine sub-result from job finished workers.
 			if (!working_index.isEmpty()) {
 				int index = working_index.poll();
 				try {
 					thread[index].join();
-					result += a[0][combine_index] * workload[index].sub_result * sign;
+					result += a[0][combine_index] * detWorkload[index].sub_result * sign;
 					sign = -sign;
 					idle_index.add(index);
-					System.out.println("Determinant Thread(Worker) " + index + " finished..");
+					System.out.println("\nDeterminant Thread(Worker) " + index + " finished..");
 				} catch (InterruptedException e) {
 					System.err.println("Error: " + e.getMessage());
 				}
@@ -177,7 +187,7 @@ public class PC extends UnicastRemoteObject implements PC2IO, PC2W {
 		return result;
 	}
 
-	// Below 'IP finder' code comes from
+	// Below 'IP finder' code refer to
 	// 'https://wiki.gswcm.net/doku.php?id=howto:code:ip_list'
 	public static String getIP() {
 		try {

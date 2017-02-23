@@ -23,18 +23,31 @@ public class W extends UnicastRemoteObject implements W2PC {
 		ID = getIP().substring(1);
 	}
 
+	@Override
+	public <T> T execute(Task<T> t) throws RemoteException {
+		return t.execute();
+	}
+
+	@Override
+	public String getID() throws RemoteException {
+		return this.ID;
+	}
+
 	public static void main(String[] args) {
 		String host = "168.18.104.56"; // PG-01.gswcm.net
 		short port_pc2w = 2081;
 		String ip = getIP().substring(1); // remove first character '/'
 
 		try {
+			// Connect to remote object
 			System.setProperty("java.rmi.server.hostname", ip);
 			W2PC w = new W();
 			Registry r = LocateRegistry.getRegistry(host, port_pc2w);
 			PC2W pc = (PC2W) r.lookup("PC2W");
 			pc.reg(w);
 			System.out.println("Worker's ID: " + ((W) w).ID);
+
+			// Monitor the connection to PC
 			while (true) {
 				try {
 					pc.checkConnection();
@@ -56,16 +69,6 @@ public class W extends UnicastRemoteObject implements W2PC {
 			System.err.println(e.getMessage());
 			System.exit(1);
 		}
-	}
-
-	@Override
-	public <T> T execute(Task<T> t) throws RemoteException {
-		return t.execute();
-	}
-
-	@Override
-	public String getID() throws RemoteException {
-		return this.ID;
 	}
 
 	// Below 'IP finder' code comes from

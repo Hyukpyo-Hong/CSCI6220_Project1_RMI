@@ -7,33 +7,40 @@ import java.util.Arrays;
 import common.Task;
 import common.W2PC;
 
-public class Det implements Runnable, Task<Long>, Serializable {
+public class DetWorkload implements Runnable, Task<Long>, Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private int[][] a;
 	private int[] mask;
 	private int n;
 	private W2PC w2pc;
-	private Workload workload;
+	long sub_result;
 
-	public void setW2pc(W2PC w2pc) {
-		this.w2pc = w2pc;
-	}
-
-	public Workload getWorkload() {
-		return workload;
-	}
-
-	public void setWorkload(Workload workload) {
-		this.workload = workload;
-	}
-
-	public Det(int[][] a, int[] mask, int n) {
+	public DetWorkload(int[][] a, int[] mask, int n, W2PC w2pc) {
 		this.a = a;
 		this.mask = mask;
 		this.n = n;
+		this.w2pc = w2pc;
 	}
 
+	@Override
+	public void run() {
+		try {
+			sub_result = w2pc.execute(this);
+		} catch (RemoteException e) {
+			System.err.println("Error: " + e.getMessage());
+		}
+
+	}
+
+	@Override
+	public Long execute() {
+		System.out.println("Compute Determinant..");
+		return det(a, mask, n);
+
+	}
+
+	// Below computing determinant code refer to class lecture.
 	public static long det(int[][] a, int[] mask, int n) {
 		long result = 0;
 
@@ -66,20 +73,4 @@ public class Det implements Runnable, Task<Long>, Serializable {
 		return result;
 	}
 
-	@Override
-	public void run() {
-		try {
-			workload.sub_result = w2pc.execute(this);
-		} catch (RemoteException e) {
-			System.err.println("Error: " + e.getMessage());
-		}
-
-	}
-
-	@Override
-	public Long execute() {
-		System.out.println("Compute Determinant..");
-		return det(a, mask, n);
-
-	}
 }
