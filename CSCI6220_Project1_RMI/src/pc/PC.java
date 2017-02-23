@@ -198,11 +198,17 @@ public class PC extends UnicastRemoteObject implements PC2IO, PC2W {
 				while (IPs.hasMoreElements() == true) {
 					InetAddress IP = IPs.nextElement();
 					if (IP instanceof java.net.Inet4Address) {
-						return IP.toString();
+						if (IP.toString().startsWith("/168")) {
+							return IP.toString();
+						} else {
+							System.out.println("Info: This IP address is not proper: " + IP.toString());
+						}
 					}
 				}
 			}
-		} catch (SocketException e4) {
+		} catch (
+
+		SocketException e4) {
 			System.err.println("Error: getNetworkInterfaces() failed: " + e4);
 		}
 		System.out.println("IP is not found.");

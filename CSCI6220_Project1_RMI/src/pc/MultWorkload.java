@@ -2,7 +2,6 @@ package pc;
 
 import java.io.Serializable;
 import java.rmi.RemoteException;
-import java.util.Arrays;
 
 import common.Task;
 import common.W2PC;
@@ -25,7 +24,8 @@ public class MultWorkload implements Runnable, Task<int[][]>, Serializable {
 		// Make partial matrix a
 		for (int j = 0, i = workerNum * aa.length / workerSize; i < (workerNum + 1) * aa.length
 				/ workerSize; i++, j++) {
-			this.a[j] = Arrays.copyOfRange(aa[i], 0, aa.length);
+			// It works when I test with matrix size 2000
+			this.a[j] = aa[i];
 		}
 
 	}

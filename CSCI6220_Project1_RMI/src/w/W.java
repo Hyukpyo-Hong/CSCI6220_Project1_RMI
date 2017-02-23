@@ -82,7 +82,11 @@ public class W extends UnicastRemoteObject implements W2PC {
 				while (IPs.hasMoreElements() == true) {
 					InetAddress IP = IPs.nextElement();
 					if (IP instanceof java.net.Inet4Address) {
-						return IP.toString();
+						if (IP.toString().startsWith("/168")) {
+							return IP.toString();
+						} else {
+							System.out.println("Info: This IP address is not proper: " + IP.toString());
+						}
 					}
 				}
 			}
